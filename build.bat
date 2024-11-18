@@ -1,0 +1,1 @@
+go build -o dist/main.dll -buildmode=c-shared cmd/client/main.go
