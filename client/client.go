@@ -7,6 +7,8 @@ import (
 	"test-dll-websocket/model"
 )
 
+var conn *websocket.Conn
+
 func ConnectWebsocket() {
 	target := url.URL{
 		Scheme: "ws",
@@ -14,57 +16,87 @@ func ConnectWebsocket() {
 		Path:   "/ws",
 	}
 
-	if conn, _, err := websocket.DefaultDialer.Dial(target.String(), nil); err != nil {
+	if ws, _, err := websocket.DefaultDialer.Dial(target.String(), nil); err != nil {
 		log.Fatal("Failed to dial:", err)
 		return
 	} else {
-		defer func(conn *websocket.Conn) {
-			err := conn.Close()
-			if err != nil {
-				log.Fatal("Failed to close:", err)
-			}
-		}(conn)
+		conn = ws
+	}
+}
 
-		for {
-			var msg *model.Message
+func CloseWebsocket() {
+	if err := conn.Close(); err != nil {
+		log.Fatal("Failed to close:", err)
+		return
+	}
+}
 
-			msg = &model.Message{
-				Status:      model.Request,
-				Content:     "Hello, World!",
-				Token:       "1234567890",
-				JsonContent: "{}",
-			}
+func ReadMessage() (*model.Message, error) {
+	var msg *model.Message
 
-			if err := conn.WriteJSON(*msg); err != nil {
-				log.Fatal("Failed to write message:", err)
-				return
-			}
+	if err := conn.ReadJSON(msg); err != nil {
+		log.Fatal("Failed to read message:", err)
+		return nil, err
+	}
 
-			if err := conn.ReadJSON(msg); err != nil {
-				log.Fatal("Failed to read message:", err)
-				return
-			}
+	return msg, nil
+}
 
-			log.Printf("Received: %+v", *msg)
+func SendMessage(msg *model.Message) error {
+	if err := conn.WriteJSON(*msg); err != nil {
+		log.Fatal("Failed to write message:", err)
+		return err
+	}
 
-			msg = &model.Message{
-				Status:      model.Close,
-				Content:     "Goodbye, World!",
-				Token:       "1234567890",
-				JsonContent: "{}",
-			}
+	return nil
+}
 
-			if err := conn.WriteJSON(*msg); err != nil {
-				log.Fatal("Failed to write message:", err)
-				return
-			}
+func MainRun() {
+	ConnectWebsocket()
 
-			if err := conn.ReadJSON(msg); err != nil {
-				log.Fatal("Failed to read message:", err)
-				return
-			}
+	defer CloseWebsocket()
 
-			break
+	for {
+		var snedMsg *model.Message
+
+		snedMsg = &model.Message{
+			Status:      model.Request,
+			Content:     "Hello, World!",
+			Token:       "1234567890",
+			JsonContent: "{}",
 		}
+
+		if err := SendMessage(snedMsg); err != nil {
+			log.Fatal("Failed to send message:", err)
+			return
+		}
+
+		if recvMsg, err := ReadMessage(); err != nil {
+			log.Fatal("Failed to read message:", err)
+			return
+		} else {
+			log.Printf("Received: %+v", *recvMsg)
+		}
+
+		snedMsg = &model.Message{
+			Status:      model.Close,
+			Content:     "Goodbye, World!",
+			Token:       "1234567890",
+			JsonContent: "{}",
+		}
+
+		if err := SendMessage(snedMsg); err != nil {
+			log.Fatal("Failed to send message:", err)
+			return
+		}
+
+		if recvMsg, err := ReadMessage(); err != nil {
+			log.Fatal("Failed to read message:", err)
+			return
+		} else {
+			log.Printf("Received: %+v", *recvMsg)
+		}
+
+		break
 	}
 }
