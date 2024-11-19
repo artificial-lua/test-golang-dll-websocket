@@ -1,12 +1,12 @@
 package main
 
 import (
+	"C"
 	"test-dll-websocket/client"
 	"test-dll-websocket/model"
 )
 
 func main() {
-	client.MainRun()
 }
 
 func ConnectWebsocket() {
