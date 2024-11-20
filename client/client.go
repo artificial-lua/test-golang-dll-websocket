@@ -32,14 +32,14 @@ func CloseWebsocket() {
 }
 
 func ReadMessage() (*model.Message, error) {
-	var msg *model.Message
+	var msg model.Message
 
-	if err := conn.ReadJSON(msg); err != nil {
+	if err := conn.ReadJSON(&msg); err != nil {
 		log.Fatal("Failed to read message:", err)
 		return nil, err
 	}
 
-	return msg, nil
+	return &msg, nil
 }
 
 func SendMessage(msg *model.Message) error {
@@ -57,16 +57,16 @@ func MainRun() {
 	defer CloseWebsocket()
 
 	for {
-		var snedMsg *model.Message
+		var sendMsg *model.Message
 
-		snedMsg = &model.Message{
+		sendMsg = &model.Message{
 			Status:      model.Request,
 			Content:     "Hello, World!",
 			Token:       "1234567890",
 			JsonContent: "{}",
 		}
 
-		if err := SendMessage(snedMsg); err != nil {
+		if err := SendMessage(sendMsg); err != nil {
 			log.Fatal("Failed to send message:", err)
 			return
 		}
@@ -78,14 +78,14 @@ func MainRun() {
 			log.Printf("Received: %+v", *recvMsg)
 		}
 
-		snedMsg = &model.Message{
+		sendMsg = &model.Message{
 			Status:      model.Close,
 			Content:     "Goodbye, World!",
 			Token:       "1234567890",
 			JsonContent: "{}",
 		}
 
-		if err := SendMessage(snedMsg); err != nil {
+		if err := SendMessage(sendMsg); err != nil {
 			log.Fatal("Failed to send message:", err)
 			return
 		}
